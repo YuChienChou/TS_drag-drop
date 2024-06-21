@@ -10,9 +10,7 @@ interface DragTarget {
   dragLeaveHandler(event: DragEvent): void;
 }
 
-
 //Project Type
-
 enum ProjectStatus {
   Active,
   Finished,
@@ -40,7 +38,7 @@ class State<T> {
   }
 }
 
-class ProjectState extends State<Project>{
+class ProjectState extends State<Project> {
   private project: Project[] = [];
   private static instance: ProjectState;
 
@@ -179,7 +177,10 @@ abstract class Component<T extends HTMLElement, U extends HTMLElement> {
 }
 
 // ProjectItem Class
-class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements Draggable {
+class ProjectItem
+  extends Component<HTMLUListElement, HTMLLIElement>
+  implements Draggable
+{
   private project: Project;
 
   get persons() {
@@ -190,7 +191,7 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements 
     }
   }
 
-  constructor(hostId: string, project : Project) {
+  constructor(hostId: string, project: Project) {
     super("single-project", hostId, false, project.id);
     this.project = project;
 
@@ -199,42 +200,65 @@ class ProjectItem extends Component<HTMLUListElement, HTMLLIElement> implements 
   }
 
   @autobind
-  dragStartHandler(event: DragEvent): void {
-    console.log(event);
+  dragStartHandler(event: DragEvent) {
+    event.dataTransfer!.setData("text/plain", this.project.id);
+    event.dataTransfer!.effectAllowed = "move";
   }
 
-  dragEndHandler(_: DragEvent): void {
+  dragEndHandler(_: DragEvent) {
     console.log("DragEnd");
   }
 
-  configure(): void {
+  configure() {
     this.element.addEventListener("dragstart", this.dragStartHandler);
     this.element.addEventListener("dragend", this.dragEndHandler);
   }
 
-  renderContent(): void {
-      this.element.querySelector("h2")!.textContent = this.project.title;
-      this.element.querySelector("h3")!.textContent = this.persons + " assigned";
-      this.element.querySelector("p")!.textContent = this.project.description;
+  renderContent() {
+    this.element.querySelector("h2")!.textContent = this.project.title;
+    this.element.querySelector("h3")!.textContent = this.persons + " assigned";
+    this.element.querySelector("p")!.textContent = this.project.description;
   }
-
 }
 
 // ProjectList Class
-class ProjectList extends Component<HTMLDivElement, HTMLElement> {
- 
+class ProjectList
+  extends Component<HTMLDivElement, HTMLElement>
+  implements DragTarget
+{
   assignedProjects: Project[]; //the assignedProjects array
 
   constructor(private type: "active" | "finished") {
     super("project-list", "app", false, `${type}-projects`);
     this.assignedProjects = [];
-    // this.element.id = `${this.type}-projects`;
 
     this.configure();
     this.renderContent();
   }
 
+  @autobind
+  dragOverHandler(event: DragEvent) {
+    if (event.dataTransfer && event.dataTransfer.types[0] === "text/plain") {
+      event.preventDefault();
+    const listEl = this.element.querySelector("ul")!;
+    listEl.classList.add("droppable");
+  }};
+
+  dropHandler(event: DragEvent) {
+    console.log(event.dataTransfer!.getData("text/plain"));
+  }
+
+  @autobind
+  dragLeaveHandler(_: DragEvent) {
+    const listEl = this.element.querySelector("ul")!;
+    listEl.classList.remove("droppable");
+  }
+
   configure() {
+    this.element.addEventListener("dragover", this.dragOverHandler);
+    this.element.addEventListener("dragleave", this.dragLeaveHandler);
+    this.element.addEventListener("drop", this.dropHandler);
+
     projectState.addListener((projects: Project[]) => {
       const relevantProjects = projects.filter((prj) => {
         if (this.type === "active") {
@@ -245,7 +269,6 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
       this.assignedProjects = relevantProjects;
       this.renderProjects();
     });
-
   }
 
   renderContent() {
@@ -264,13 +287,10 @@ class ProjectList extends Component<HTMLDivElement, HTMLElement> {
       new ProjectItem(this.element.querySelector("ul")!.id, prjItem);
     }
   }
-
-
-
 }
 
 // ProjectInput Class
-class ProjectInput extends Component<HTMLDivElement, HTMLFormElement>{
+class ProjectInput extends Component<HTMLDivElement, HTMLFormElement> {
   titleInputElement: HTMLInputElement; //add this attribute to get the title input element from the form
   descriptionInputElement: HTMLInputElement; //add this attribute to get the description input element from the form
   peopleInputElement: HTMLInputElement; //add this attribute to get the people input element from the form
@@ -286,7 +306,7 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement>{
     this.peopleInputElement = this.element.querySelector(
       "#people"
     ) as HTMLInputElement; //get the access of the people input element
-   
+
     this.configure();
   }
 
@@ -349,9 +369,6 @@ class ProjectInput extends Component<HTMLDivElement, HTMLFormElement>{
 
     this.clearInputs();
   }
-
-
-
 }
 
 const prjInput = new ProjectInput();
